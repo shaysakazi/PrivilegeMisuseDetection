@@ -1,30 +1,27 @@
-# -*- coding: utf-8 -*-
-import click
-import logging
-from pathlib import Path
-from dotenv import find_dotenv, load_dotenv
+"""
+    Process data
+"""
+import os
+import pandas as pd
 
 
-@click.command()
-@click.argument('input_filepath', type=click.Path(exists=True))
-@click.argument('output_filepath', type=click.Path())
-def main(input_filepath, output_filepath):
-    """ Runs data processing scripts to turn raw data from (../raw) into
-        cleaned data ready to be analyzed (saved in ../processed).
-    """
-    logger = logging.getLogger(__name__)
-    logger.info('making final data set from raw data')
-
-
-if __name__ == '__main__':
-    log_fmt = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-    logging.basicConfig(level=logging.INFO, format=log_fmt)
-
-    # not used in this stub but often useful for finding various files
-    project_dir = Path(__file__).resolve().parents[2]
-
-    # find .env automagically by walking up directories until it's found, then
-    # load up the .env entries as environment variables
-    load_dotenv(find_dotenv())
-
-    main()
+def intermediate_data():
+    raw_dir = '../data/raw'
+    inter_dir = '../data/interim'
+    for file in os.listdir(raw_dir):
+        if file.endswith(".csv"):
+            dataset = pd.read_csv(f'{raw_dir}/{file}')
+            if file == 'device.csv' or file == 'logon.csv':
+                dataset.to_csv(f'{inter_dir}/{file}', index=False)
+            elif file == 'file.csv':
+                dataset.drop(columns='content', inplace=True)
+                dataset.to_csv(f'{inter_dir}/{file}', index=False)
+            elif file == '2009-12.csv':
+                dataset = dataset[['user_id', 'role']]
+                dataset.to_csv(f'{inter_dir}/users.csv', index=False)
+            elif file == 'r4.1-3.csv':
+                dataset = pd.DataFrame(dataset.to_numpy())
+                dataset = dataset[[0, 1, 2, 3, 4, 5]]
+                dataset = dataset.loc[dataset[0] != 'email'].loc[dataset[0] != 'http'].reset_index(drop=True)
+                dataset.rename(columns={0: "type", 1: "id", 2: "date", 3: "user", 4: "pc", 5: "activity"}, inplace=True)
+                dataset.to_csv(f'{inter_dir}/insider.csv', index=False)
